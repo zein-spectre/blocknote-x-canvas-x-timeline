@@ -33,3 +33,27 @@ The legacy application was already mature. By cleanly swapping out the persisten
 **Important Lessons**:
 - When migrating legacy code, verify that all static assets and configuration files (like `themes/` and `elementIcons.js`) are copied along with components.
 - Always shim external side-effects (like I/O) at the boundary layer so the core UI logic can remain untouched.
+
+## Phase 1: Settings Cleanup
+**Date**: 2026-09-22
+
+**Issue**: 
+The Timeline settings menu was bloated with technical toggles that were confusing to a standard user. It required cleaning up and hardcoding the optimal behavior for these removed settings.
+
+**Root Cause**: 
+The legacy engine was built with a wide array of Markwhen rendering toggles (e.g., Disable Groups, Hide Decimals) which are rarely useful and clutter the UX.
+
+**Final Fix**:
+1. Removed `disableGroups`, `keepSelection`, `showPopularTags`, `hideDecimals`, `eventLinesToGroupBottom`, `useWiki`, `useSpreadsheet`, `useMaps`, `branchOrdering`, `useCalendar`, and `hideSpanConnectors` from UI.
+2. Hardcoded their boolean values to their logical optimal states in `timelineData.file` and the payload for `onUpdateTimelineRef`.
+3. Deleted the sidebar component and merged the `general` and `appearance` settings into one simplified panel.
+
+**Why the fix works**:
+The underlying engine accepts these toggles in the payload. By hardcoding them to true/false respectively before sending the payload, we enforce the ideal UI configuration without needing the user to configure it themselves.
+
+**Verification Performed**:
+- Simulated frontend build via `npm run build` after removing each set of properties and verified that the build output succeeds with code 0.
+- Assured all dependencies of the removed hooks were cleaned up (no stray variables in dependencies array).
+
+**Important Lessons**:
+- When porting a tool built for power users to a simplified UI, audit settings and aggressively hardcode the "ideal" path to reduce cognitive load.

@@ -17,3 +17,11 @@
 **Date:** 2026-09-22
 **Context:** The legacy project used its own rich-text component (`NoteEditor`). We needed it to match the main CMS experience.
 **Decision:** Instead of ripping out the right-panel logic, we built `BlockNoteWrapper.jsx` to adapt the legacy `onSave` / `initialContent` prop signatures to the standard BlockNote `<Editor />` component.
+
+## 4. Hardcoding Legacy Settings
+**Date:** 2026-09-22
+**Context:** The legacy timeline engine contained numerous highly technical rendering options in `SettingsModal.jsx` (e.g. Wiki views, Disable Groups, Hide Decimals) that cluttered the UI.
+**Decision:** We aggressively pruned the UI and hardcoded these settings to their logical "ideal" defaults within the payload before updating the `timelineRef`.
+**Consequences:** 
+- Drastically simplifies the settings menu to only 5 essential toggles.
+- Prevents users from accidentally placing the timeline into an unreadable state.

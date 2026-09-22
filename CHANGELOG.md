@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Replaced the experimental grid-based canvas timeline with the mature infinite-canvas implementation from the Electron app.
 - Shimmed `window.electron` calls inside the timeline engine to use `appwriteApi.js`, enabling web-based persistence.
+- Cleaned up `SettingsModal.jsx` by removing redundant technical toggles (Wiki, Spreadsheet, Maps, Hide Decimals, Disable Groups, Keep Selection, Popular Tags, Branch Ordering, Use Calendar, Connect Event Lines) and hardcoding their behavior to logical defaults.
+- Merged the remaining settings in `SettingsModal.jsx` into a single, scrollable panel without a sidebar.
 
 ### Fixed
 - Fixed missing timeline axis issue where events were floating loosely on the page.
