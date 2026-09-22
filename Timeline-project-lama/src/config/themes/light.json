@@ -1,0 +1,25 @@
+{
+  "name": "Clean White",
+  "type": "light",
+  "collection": "bundled",
+  "author": "custom",
+  "thumbnail": "",
+  "colors": {
+    "text-primary": "#555555",
+    "ui-muted": "#AAAAAA",
+    "accent-color": "#E5E5E5",
+    "surface-active": "#F5F5F5",
+    "surface": "#FFFFFF",
+    "inset-bg": "#FFFFFF",
+    "app-bg": "#FFFFFF",
+    "text-muted": "#888888",
+    "text-subtle": "#999999",
+    "era-label": "#666666",
+    "selection-color": "#E5E5E5",
+    "link-color": "#555555",
+    "light-bg": "#FFFFFF",
+    "border-color": "#EAEAEA",
+    "secondary-text": "#777777",
+    "highlight-color": "#F0F0F0"
+  }
+}

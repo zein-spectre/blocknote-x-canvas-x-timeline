@@ -1,0 +1,79 @@
+@font-face {
+  font-family: "Inter";
+  src: url("../assets/fonts/Inter-VariableFont_opsz,wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("../assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--app-font-family, "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+  font-size: calc(14px * var(--app-font-scale, 1));
+}
+
+:root {
+  --text-5xs: 0.5714rem; /* 8px */
+  --text-4xs: 0.6429rem; /* 9px */
+  --text-3xs: 0.7143rem; /* 10px */
+  --text-2xs: 0.7857rem; /* 11px */
+  --text-xs: 0.8571rem; /* 12px */
+  --text-sm: 0.9286rem; /* 13px */
+  --text-base: 1rem; /* 14px */
+  --text-md: 1.0714rem; /* 15px */
+  --text-lg: 1.1429rem; /* 16px */
+  --text-xl: 1.2857rem; /* 18px */
+  --text-2xl: 1.4286rem; /* 20px */
+  --text-3xl: 3rem; /* 42px */
+}
+
+*,
+*::before,
+*::after {
+  transition: none;
+}
+
+body.theme-transitioning,
+body.theme-transitioning *,
+body.theme-transitioning *::before,
+body.theme-transitioning *::after {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    fill 0.2s ease,
+    stroke 0.2s ease !important;
+}
+
+body.dragging {
+  user-select: none;
+  cursor: col-resize;
+}
+
+button:focus:not(:focus-visible),
+[role="button"]:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-subtle);
+}
+
