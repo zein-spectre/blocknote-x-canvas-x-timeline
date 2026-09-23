@@ -57,3 +57,90 @@ The underlying engine accepts these toggles in the payload. By hardcoding them t
 
 **Important Lessons**:
 - When porting a tool built for power users to a simplified UI, audit settings and aggressively hardcode the "ideal" path to reduce cognitive load.
+
+## Fix for Sequential Timeline Toggle Not Applying
+**Date:** 2026-09-23
+**Problem:** Toggling "Sequential Timeline" ON in the UI did not compress the timeline to only show events (years like 1921, 1922 still rendered).
+**Root Cause:** `TimelineApp.jsx` contained a `handleUpdateTimeline` function that manually destructured all allowed properties from the `SettingsModal` updates. `useSequentialScale` was missing from the destructuring list and `nextFile` construction, causing the setting to be silently dropped before being saved to Appwrite.
+**Fix:** Added `useSequentialScale` to the destructuring arguments and `nextFile` object in `TimelineApp.jsx`. Additionally, added `useCalendar` to the auto-save `useEffect` dependency array in `SettingsModal.jsx` to ensure changes to the Calendar mode immediately auto-save.
+**Verification:** Subagent confirmed via UI screenshot that with Sequential Timeline ON, only 1920 and 1936 are rendered on the axis.
+
+## Fix: 1926 Not Appearing as Tick Label in Sequential Timeline Mode
+**Date:** 2026-09-23
+**Problem:** With Sequential Timeline ON and an event at 09/20/1926, the tick "1926" did not appear as a labeled tick on the axis.
+**Root Cause (Multi-layer):**
+1. Event dates are stored as fractional years (e.g. `1926.7191` for Sept 20, 1926). The `uniqueYears` Set was storing the raw fractional value instead of the integer year, so `1926.7191` never matched an integer tick candidate.
+2. The tick label proximity filter (`showLabel = labelLeft >= lastLabelRight + MIN_LABEL_GAP`) was suppressing the 1926 label because it was too close to 1920 and 1936 at the default zoom level.
+3. The tick proximity guard (`if (px < lastTickPx + tickGapForYear(...))`) was also skipping ticks too close together.
+**Fix:**
+- Applied `Math.floor()` to all dates/times before adding to `yearSet` so only integer years are used.
+- In Sequential mode, bypassed the tick proximity filter so all sequential ticks always render.
+- In Sequential mode, bypassed the label proximity filter so all sequential labels always show.
+**Verification:** Browser confirmed 1920 M, 1926 M, and 1936 M all appear as labeled ticks on the axis.
+
+## Session: BlockNote Fragmentation & Save Button Debugging
+**Date:** 2026-09-23
+
+### Problem 1: "Simpan Perubahan" Button Not Visible
+
+**Issue:** User reported the Save button at the bottom of the right panel in Edit mode was not visible or reachable. Could not scroll to it.
+
+**Failed Attempt 1 — `position: sticky`:**
+- Applied `position: sticky; bottom: 0` to `.rp-action-bar`.
+- Result: Failed. The sticky element was clipped by the parent `overflow: auto` container. The button never stayed in view.
+
+**Failed Attempt 2 — `position: absolute; bottom: 0`:**
+- Applied `position: absolute; bottom: 0; left: 0; right: 0` to `.rp-action-bar`. Made `.right-panel` `position: relative`.
+- Result: Failed. `.right-panel` had no bounded height — it grew with content. So `bottom: 0` of the absolute bar mapped to a position below the viewport. Button was completely off-screen.
+
+**Failed Attempt 3 — `overflow: visible` on BlockNoteWrapper:**
+- Changed `overflow: auto` to `overflow: visible` on the div wrapping `<BlockNoteView>` in `BlockNoteWrapper.jsx`, hoping to prevent nested scroll conflicts.
+- Result: Failed. This was a blind guess based on no evidence. It broke BlockNote's read-only rendering — the Note section appeared as an empty white box in Preview mode. Reverted.
+
+**Root Cause (Discovered):**
+The actual root cause was that `.app-shell` used `height: 100vh` while being placed inside a CMS layout that already consumed ~65px for the top navigation bar. This caused the entire timeline and its panels to overflow by ~65px below the visible screen. The Save button was always there — it was simply rendered off-screen.
+
+Additionally, `TimelinePage.tsx` had `margin: "-24px 0"` which shifted the layout further, and `height: "calc(100vh - 65px)"` which was a failed attempt to compensate that did not account for all layers.
+
+**Partial Fix Applied (not browser-verified):**
+- Removed `position: absolute` from `.rp-action-bar` → reverted to `flex-shrink: 0` (normal flex item).
+- Changed `.app-shell` height: `100vh` → `100%`.
+- Changed `.timeline-scroll` width/height: `100vw/100vh` → `100%`.
+- Removed `py-6` from `<main>` in `App.tsx`.
+- Changed `TimelinePage.tsx` to `height: "100%"`, removed `margin: "-24px 0"`.
+- Changed `TimelineViewPage.tsx` to `height: "100%"`, removed `margin: "-24px 0"`.
+
+---
+
+### Problem 2: Button Colors (Simpan Perubahan / Batal)
+
+**Issue:** After Save button became somewhat visible, it appeared gray/white with white text — completely illegible.
+
+**Root Cause:** The inline style used `background: 'var(--brand-primary)'`. The CSS variable `--brand-primary` is NOT defined anywhere in the timeline engine's CSS system. The browser fell back to transparent/inherited background.
+
+**Fix Applied:** Replaced `var(--brand-primary)` with hardcoded `#1f2937` (dark gray). Button text color on Batal changed from `var(--text-muted)` to `#1f2937`. This was applied without browser verification.
+
+---
+
+### Problem 3: Note Content Missing in Preview After Save
+
+**Issue:** After clicking Save and then Publish, opening the Preview showed an empty white box in the Note section instead of the note content.
+
+**Root Cause:** The `overflow: visible` change from Failed Attempt 3 (see above) was still in place when the user tested Preview. It broke BlockNote's internal read-only rendering. This was NOT a data/save issue — the content was intact in Appwrite.
+
+**Fix Applied:** Reverted `overflow: visible` → `overflow: auto` in `BlockNoteWrapper.jsx`.
+
+---
+
+### Problem 4: Fragmented BlockNote Architecture (UNRESOLVED)
+
+**Issue:** User discovered that the Timeline Note editor (BlockNoteWrapper.jsx) lacks Upload Image capability that the Article editor has.
+
+**Root Cause:** Two independent BlockNote instances were created for different parts of the app:
+1. `src/components/Editor.tsx` — Article editor. Configured with `uploadFile`, math, mentions.
+2. `src/timeline-engine/components/BlockNoteWrapper.jsx` — Timeline Note. Configured with math only, missing `uploadFile` and mentions.
+
+**Partial Fix Applied:** Added `uploadFile` Appwrite handler to `BlockNoteWrapper.jsx`. NOT verified.
+
+**UNRESOLVED — Architectural Decision Needed:**
+The user decided the correct fix is a full architectural overhaul: one shared BlockNote factory/hook that all editor surfaces (Article, Timeline Note, Canvas Note) use. This ensures feature parity across all formats. No code changes should be made without designing this shared architecture first.
