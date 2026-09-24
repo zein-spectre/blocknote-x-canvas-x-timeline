@@ -25,3 +25,12 @@
 **Consequences:** 
 - Drastically simplifies the settings menu to only 5 essential toggles.
 - Prevents users from accidentally placing the timeline into an unreadable state.
+
+## 5. Canvas to Article Page Relational Flow & Searchability
+**Date:** 2026-09-24
+**Context:** We implemented custom React `embeddable` components in Excalidraw to represent "Article Pages". However, Excalidraw's built-in "Find on canvas" search could not detect these custom components because their text existed in React state, not in Excalidraw's `type: "text"` element JSON data.
+**Decision:** We entirely dropped the custom "Article Page" `embeddable` button and forced users to rely strictly on typing `@` inside standard Excalidraw text elements to link to articles. The linked text (e.g. `📝 Artikel 2`) is natively saved as a string inside Excalidraw's elements. We also aggressively hid the Library, Social Links, and Export buttons via strict CSS and `UIOptions` to enforce this streamlined UX.
+**Consequences:** 
+- Excalidraw's native "Find on canvas" works flawlessly and finds all referenced articles on the canvas.
+- Reduces performance overhead by not rendering heavy IFrames/BlockNote wrappers for every note representation on the canvas.
+- Keeps UX highly intuitive, modeling the standard Notion/Affine behavior.
