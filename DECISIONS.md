@@ -34,3 +34,21 @@
 - Excalidraw's native "Find on canvas" works flawlessly and finds all referenced articles on the canvas.
 - Reduces performance overhead by not rendering heavy IFrames/BlockNote wrappers for every note representation on the canvas.
 - Keeps UX highly intuitive, modeling the standard Notion/Affine behavior.
+
+## 6. Mention Navigation — Always Open in New Tab
+**Date:** 2026-09-24
+**Context:** Mention chips (`📝 Canvas 1`) inside the BlockNote editor were originally navigating within the same React Router tab. This caused two problems: (1) unsaved changes on the originating page (Timeline, Canvas) would be discarded silently when React unmounted the page, and (2) clicking a mention from a Preview page would incorrectly route to an Admin page.
+**Decision:** All mention clicks across ALL surfaces (Admin editor, Preview/PublicReader, Canvas Admin, Canvas Preview) MUST open the target document in a new browser tab via `window.open(..., '_blank', 'noopener,noreferrer')`. React Router `navigate()` is forbidden for cross-document mention navigation.
+**Consequences:**
+- No data-loss risk from accidental mention clicks.
+- Preview pages correctly open Preview URLs (`/view/...`) in the new tab.
+- Canvas `handleOpenAppwriteNote` now uses `Promise.any()` to detect doc type before opening the correct URL.
+
+## 7. Excalidraw Canvas Always Renders in Light Theme
+**Date:** 2026-09-24
+**Context:** Excalidraw's built-in Dark mode toggle was available in the hamburger menu. This creates an inconsistent UX where the canvas theme is user-controlled but the rest of the CMS (Article, Timeline) is not.
+**Decision:** Disable the Dark mode toggle in Excalidraw by setting `UIOptions.canvasActions.toggleTheme: false` in both `CanvasPrototypePage.tsx` and `CanvasViewPage.tsx`. The canvas will always render in the light theme.
+**Consequences:**
+- Consistent visual experience across all pages of the CMS.
+- Users cannot accidentally switch to dark mode on the canvas.
+

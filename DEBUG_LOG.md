@@ -323,3 +323,103 @@ By migrating article representations completely to standard Excalidraw text node
 - User verified that the Library tab and Export buttons are successfully hidden from the UI.
 **Important Lessons:**
 - Do not fight the host framework's core features (e.g., search). If Excalidraw expects data in text elements, inject data into text elements rather than floating React `embeddables` over the top, unless you're prepared to reimplement the search feature.
+
+---
+
+## Session: Timeline Preview Blank Screen & Span/Era Rendering Fixes
+**Date:** 2026-09-24
+
+### Problem 1: Timeline Preview (`/view/timeline/:id`) renders completely blank
+
+**Root Cause (Two layers):**
+1. `TimelineViewPage.tsx` set its container height to `height: "100%"`. Because its parent `<main>` uses `min-h`, the resolved height was `auto` → effectively 0px. The canvas existed but was invisible — clipped to 0px height.
+2. When a timeline's data was empty (due to failed saves caused by 404 mention references), `allYears` was an empty array. Calling `Math.min(...[])` and `Math.max(...[])` returns `Infinity` and `-Infinity`, causing all downstream pixel calculations to produce `NaN`. This crashed the entire render silently.
+
+**Final Fix:**
+1. `TimelineViewPage.tsx` — changed `height: "100%"` to `height: "calc(100vh - 65px)"` to give the canvas a definite viewport-anchored height.
+2. `TimelineView.jsx` — added fallback: `rawMin = allYears.length > 0 ? Math.min(...allYears) : 0` and `rawMax = allYears.length > 0 ? Math.max(...allYears) : 100`. Empty timelines now render a safe default axis (0–100) instead of crashing.
+
+**Why the fix works:**
+- CSS height `calc(100vh - 65px)` is always a concrete pixel value, independent of parent sizing.
+- Fallback values of 0/100 for `rawMin`/`rawMax` prevent the `NaN` cascade. The axis renders cleanly even with no data.
+
+**Verification Performed:**
+- User confirmed preview page now shows the timeline canvas with axis, spans, and eras visible.
+
+**Important Lessons:**
+- `height: "100%"` inside a `min-height` parent resolves to `auto` in CSS, not to the min-height value. Always use explicit `calc(100vh - ...)` for viewport-filling canvases.
+- Always guard `Math.min(...array)` and `Math.max(...array)` for empty arrays. JS returns `Infinity`/`-Infinity` for spread of empty array, which silently propagates as `NaN` in arithmetic.
+
+---
+
+### Problem 2: Spans and Eras visible in Admin but invisible in Preview
+
+**Root Cause:**
+When `file.start` or `file.end` is unset, their values in the database are stored as `""` (empty string). In JavaScript, `"" != null` evaluates to `true` — so the clamping guard `if (file.start != null)` was passing for empty string. Downstream, `yearToPx("")` returned `yearToPx(0)` (year 0), forcibly clamping all spans that started before year 0 to width=0 and all eras to start at year 0. Elements like "Mulai kehidupan" (10 SM to 20 M, i.e. year -10 to 20) had their width calculated as 0 and were filtered out by `if (span.width <= 0) return null`.
+
+**Final Fix:**
+Changed all clamping guards in three places:
+1. `TimelineView.jsx` (era clamping) — `file.start != null` → `file.start != null && file.start !== ""`
+2. `TimelineView.jsx` (event visibility) — same guard for event/event-line rendering
+3. `timelineUtils.js` `layoutSpans()` — same guard for span left/right clamping
+
+**Why the fix works:**
+Empty string `""` is now treated the same as `null` — both mean "no bound set, do not clamp." Elements are then positioned based solely on their own start/end dates, which are correct.
+
+**Verification Performed:**
+- User confirmed spans (including pre-year-0 elements like "Mulai kehidupan") now appear in Preview identically to Admin.
+
+**Important Lessons:**
+- Database fields that are "unset" may come back as `""` (empty string), not `null` or `undefined`. Always normalize with `!= null && !== ""` when checking for "has a value".
+- The Admin Dashboard often has slightly different state (fresh fetch, nullable defaults) vs Preview (re-serialized from DB JSON) — always test both paths.
+
+---
+
+## Fix: Mention Click Navigation — All Surfaces Open in New Tab
+**Date:** 2026-09-24
+
+**Problem:**
+Mention chips in the editor, when clicked, navigated within the same tab using React Router `navigate()`. This posed a data-loss risk: navigating away from an unsaved Timeline or Canvas would unmount the page and discard all unsaved changes. Additionally, navigating from a Preview page via mention was routing to Admin pages.
+
+**Root Cause:**
+- `AdminEditorPage.tsx` passed `onOpenNote={(noteId) => navigate(...)}` — same tab.
+- `PublicReader.tsx` passed `onOpenNote={(noteId) => navigate(...)}` — same tab.
+- `CanvasViewPage.tsx` and `CanvasPrototypePage.tsx` used `handleOpenAppwriteNote` which loaded note content into a side panel instead of navigating at all.
+- The `NoteMention` render in `Editor.tsx` already had `target="_blank"` for the `<a>` tag, but the `onOpenNote` module-scope fallback was overriding it via `onClick`.
+
+**Final Fix:**
+1. `AdminEditorPage.tsx` — `onOpenNote` changed to `window.open(..., '_blank', 'noopener,noreferrer')`.
+2. `PublicReader.tsx` — same.
+3. `CanvasViewPage.tsx` — `handleOpenAppwriteNote` rewritten: detects doc type via `Promise.any()` across all three collections, then `window.open` the correct `/view/...` URL in a new tab.
+4. `CanvasPrototypePage.tsx` — same pattern but opens Admin (`/admin/edit/`, `/canvas/`, `/timeline/`) URLs.
+
+**Why the fix works:**
+`window.open(..., '_blank')` always opens a new browser tab, completely bypassing React Router state. The originating page (Timeline, Canvas, Admin editor) stays mounted and preserves all unsaved state. The opened page starts fresh with its own lifecycle.
+
+**Verification Performed:**
+- User confirmed mention click behavior: canvas stays open, new tab opens with the mentioned document.
+
+**Important Lessons:**
+- Any navigation from within a page that has unsaved local state MUST use `window.open(_blank)` or an equivalent that avoids unmounting the current page.
+- Never use React Router `navigate()` for cross-document mention links in a CMS where the current page may have unsaved state.
+
+---
+
+## Fix: Excalidraw Dark Mode Toggle Removed
+**Date:** 2026-09-24
+
+**Problem:**
+Excalidraw's built-in "Dark mode" option was visible in the hamburger (☰) menu in the Canvas page. This conflicted with the desired UX (canvas should always render in a consistent light theme).
+
+**Root Cause:**
+The `UIOptions.canvasActions` object in both `CanvasPrototypePage.tsx` and `CanvasViewPage.tsx` did not include `toggleTheme: false`. Excalidraw shows the Dark mode toggle by default.
+
+**Final Fix:**
+Added `toggleTheme: false` to `UIOptions.canvasActions` in both files.
+
+**Why the fix works:**
+Excalidraw respects `UIOptions.canvasActions.toggleTheme: false` and removes the menu item entirely. No CSS hacks needed.
+
+**Verification Performed:**
+User confirmed Dark mode option no longer appears in the Canvas hamburger menu.
+

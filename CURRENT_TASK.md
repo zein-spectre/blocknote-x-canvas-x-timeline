@@ -1,18 +1,19 @@
 # CURRENT_TASK.md
 
-## Status: COMPLETED
+## Status: COMPLETED — FINALISASI PERTAMA
 
-## Previous Problem (RESOLVED)
-**Cannot scroll down on Article Page (`/article/:id`)** — This has been fixed. `PublicReader.tsx` contains an `onWheel` handler and `key={id}` re-mount. `App.tsx` uses `<main className="flex-1">` which allows natural document scrolling.
-**Canvas Article Page Searchability** — Excalidraw's "Find on canvas" failed to find custom `embeddable` Article Pages. Fixed by removing the Article Page embeddable button and forcing users to link to articles exclusively via `@` mentions inside standard Excalidraw text blocks, which Excalidraw can natively search.
+**Finalized:** 2026-09-24
 
 ## What Is Currently Working
 1. ✅ Article page (`/article/:id`) — scrolls via window, mention chips navigate correctly, content refreshes on route change.
 2. ✅ Admin editor (`/admin/edit/:id`) — mention autocomplete (`@`), mention chip navigation, content switching with correct key.
 3. ✅ Timeline page (`/timeline/:id`) — viewport-anchored layout, save/publish buttons visible, sequential timeline ticks display correctly.
-4. ✅ Canvas page (`/canvas/:id`) — mention chips route properly. Article integration relies solely on standard `@` mentions for perfect compatibility with Excalidraw's "Find on canvas" search. Extraneous Excalidraw UI (Export, Library, Social Links) is hidden.
+4. ✅ Canvas page (`/canvas/:id`) — mention chips route properly. Article integration relies solely on standard `@` mentions for perfect compatibility with Excalidraw's "Find on canvas" search. Extraneous Excalidraw UI (Export, Library, Social Links, Dark mode toggle) is hidden.
 5. ✅ BlockNoteWrapper.jsx — has `uploadFile`, `noteMention` schema, `@` suggestion menu, `onOpenNote` module-scope fallback.
 6. ✅ AdminDashboard — uses `Promise.allSettled` for graceful degradation.
+7. ✅ Mention click — ALL mention clicks (Admin, Preview, Canvas) open in a new tab. No same-tab navigation risk.
+8. ✅ Timeline Preview (`/view/timeline/:id`) — renders correctly with proper `calc(100vh - 65px)` height. Empty timeline fallback prevents blank screen.
+9. ✅ Timeline span/event/era rendering — `file.start`/`file.end` empty string edge case fixed; elements no longer get clamped to year 0 when bounds are unset.
 
 ## Pending Architectural Issue (UNRESOLVED)
 **Fragmented BlockNote Architecture** — Two independent BlockNote instances exist:
@@ -24,5 +25,4 @@ Both have been manually kept in feature parity (uploadFile, math, noteMention, p
 **No code changes should be made to this until user provides explicit direction.**
 
 ## Next Step
-**COMPLETED** — All documented canvas search bugs and UI cleanup tasks are complete. Awaiting user's next instructions.
-
+Awaiting user's next instructions for Phase 2.
